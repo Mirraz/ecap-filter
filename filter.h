@@ -5,14 +5,19 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
+struct filter_struct_;
+typedef struct filter_struct_ filter_struct;
 
-typedef struct {
-} filter_struct;
+typedef enum {
+	FILTER_URI_ALLOW,
+	FILTER_URI_DENY,
+	FILTER_URI_DOESNT_EXIST,
+	FILTER_URI_ERROR
+} filter_uri_result_enum;
 
-void filter_construct(filter_struct *filter);
+filter_struct *filter_construct(const char *filename);
 void filter_destruct(filter_struct *filter);
-bool filter_uri_is_allowed(const filter_struct *filter, const char *uri);
+filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri);
 
 #ifdef __cplusplus
 }

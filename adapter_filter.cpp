@@ -39,7 +39,7 @@ class Service: public libecap::adapter::Service {
 		virtual MadeXactionPointer makeXaction(libecap::host::Xaction *hostx);
 
 	private:
-		filter_struct filter_data;
+		filter_struct *filter;
 };
 
 
@@ -146,11 +146,12 @@ void Adapter::Service::setOne(const libecap::Name &name, const libecap::Area &va
 
 void Adapter::Service::start() {
 	libecap::adapter::Service::start();
-	filter_construct(&filter_data);
+	filter = filter_construct("/tmp/db.sqlite"); // TODO check result
 }
 
 void Adapter::Service::stop() {
-	filter_destruct(&filter_data);
+	filter_destruct(filter);
+	filter = NULL;
 	libecap::adapter::Service::stop();
 }
 
@@ -166,7 +167,7 @@ bool Adapter::Service::wantsUrl(const char *url) const {
 
 Adapter::Service::MadeXactionPointer
 Adapter::Service::makeXaction(libecap::host::Xaction *hostx) {
-	return Adapter::Service::MadeXactionPointer(new Adapter::Xaction(hostx, &filter_data));
+	return Adapter::Service::MadeXactionPointer(new Adapter::Xaction(hostx, filter));
 }
 
 
@@ -203,7 +204,9 @@ std::string Adapter::Xaction::getUri() const {
 void Adapter::Xaction::start() {
 	Must(hostx);
 
-	if (! filter_uri_is_allowed(filter, getUri().c_str())) {
+	filter_uri_result_enum result = filter_uri_is_allowed(filter, getUri().c_str());
+	// TODO default policy for domain not in db
+	if (result != FILTER_URI_ALLOW && result != FILTER_URI_DOESNT_EXIST) {
 		hostx->blockVirgin(); // block access
 		return;
 	}
