@@ -135,15 +135,13 @@ static filter_uri_result_enum categories_are_allowed(const char *categories_list
 filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri) {
 	filter_uri_result_enum result = FILTER_URI_ERROR;
 	if (filter == NULL) goto err_return;
-	const char *extracted_domain;
-	size_t domain_size = extract_domain(uri, &extracted_domain);
+	const char *domain;
+	size_t domain_size = extract_domain(uri, &domain);
 	if (domain_size == 0) goto err_return;
-	char *domain = strndup(extracted_domain, domain_size);
-	if (domain == NULL) goto err_return;
 
 	if (
 		sqlite3_bind_text(
-			filter->select_categories_stmt, 1, domain, domain_size, SQLITE_STATIC
+			filter->select_categories_stmt, 1, domain, domain_size*sizeof(domain[0]), SQLITE_STATIC
 		) != SQLITE_OK
 	) goto err_reset;
 
@@ -155,14 +153,11 @@ filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const 
 	const unsigned char *categories = sqlite3_column_text(filter->select_categories_stmt, 0);
 	if (sqlite3_step(filter->select_categories_stmt) != SQLITE_DONE) goto err_reset;
 
-	if (sqlite3_reset(filter->select_categories_stmt) != SQLITE_OK) goto err_free;
-	free(domain);
+	if (sqlite3_reset(filter->select_categories_stmt) != SQLITE_OK) goto err_return;
 	return categories_are_allowed((const char *)categories, filter->map);
 
 err_reset:
 	sqlite3_reset(filter->select_categories_stmt); // TODO result code
-err_free:
-	free(domain);
 err_return:
 	return result;
 }
