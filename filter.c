@@ -19,7 +19,12 @@ filter_struct *filter_construct(const char *filename) {
 	if (filter->map == NULL) goto err_filter_free;
 
 	if (
-		sqlite3_open_v2(filename, &filter->db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK
+		sqlite3_open_v2(
+				filename,
+				&filter->db,
+				SQLITE_OPEN_URI | SQLITE_OPEN_READONLY,
+				NULL
+		) != SQLITE_OK
 	) goto err_map_destruct;
 
 	const char *select_rules_sql = "SELECT category_id, allowed FROM rules";
