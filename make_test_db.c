@@ -204,8 +204,13 @@ err_exit:
 }
 
 int main (int argc, char *argv[]) {
-	if (argc != 2) print_err_and_exit("wrong amount of arguments");
-	unsigned int seed = time(NULL);
+	if (!(argc >= 2 && argc <= 3)) print_err_and_exit("wrong amount of arguments");
+	unsigned int seed;
+	if (argc == 2) {
+		seed = time(NULL);
+	} else {
+		seed = atoi(argv[2]);
+	}
 	printf("seed = %u\n", seed);
 	srand(seed);
 	make_test_db(argv[1], 128, 1048576);
