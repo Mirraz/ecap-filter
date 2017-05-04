@@ -22,5 +22,12 @@ map.o: map.cpp map.h Makefile
 	$(CPPC) -o $@ $< -c $(CPPFLAGS)
 
 
+make_test_db.o: make_test_db.c
+	$(CC) -o $@ $< -c -O2 -Wall -Wextra -pipe
+
+make_test_db: make_test_db.o
+	$(LD) -o $@ $^ -lsqlite3
+
+
 clean:
 	rm -fr *.o
