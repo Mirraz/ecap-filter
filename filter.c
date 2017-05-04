@@ -71,7 +71,7 @@ void filter_destruct(filter_struct *filter) {
 static size_t extract_domain(const char *uri, const char **domain_out) {
 	// scheme:[//[user[:password]@]host[:port]][/path][?query][#fragment]
 	const char *cur = uri, *token = cur;
-	// 'schema:'
+	// 'scheme:'
 	while (*cur != '\0' && *cur != ':') ++cur;
 	if (*cur == '\0') return 0;
 	assert(*cur == ':');
@@ -95,9 +95,9 @@ static size_t extract_domain(const char *uri, const char **domain_out) {
 		if (*cur == '\0' || *cur == '/') {*domain_out = prev_token; return token-prev_token-1;}
 	}
 	assert(*cur == '@');
-	// 'host:' or 'host/' or 'host\0'
 	++cur;
 	token = cur;
+	// 'host:' or 'host/' or 'host\0'
 	while (*cur != '\0' && *cur != ':' && *cur != '/') ++cur;
 	*domain_out = token;
 	return cur-token;
