@@ -43,6 +43,7 @@ class Service: public libecap::adapter::Service {
 		filter_struct *filter;
 		std::string db_uri;
 		std::string default_policy;
+		bool default_policy_is_allow;
 };
 
 
@@ -60,7 +61,7 @@ class Cfgtor: public libecap::NamedValueVisitor {
 
 class Xaction: public libecap::adapter::Xaction {
 	public:
-		Xaction(libecap::host::Xaction *x, const filter_struct *f);
+		Xaction(libecap::host::Xaction *x, const filter_struct *f, bool d);
 		virtual ~Xaction();
 
 		// meta-information for the host transaction
@@ -91,6 +92,7 @@ class Xaction: public libecap::adapter::Xaction {
 	private:
 		libecap::host::Xaction *hostx; // Host transaction rep
 		const filter_struct *filter;
+		bool default_policy_is_allow;
 
 		std::string getUri() const;
 };
@@ -152,6 +154,7 @@ void Adapter::Service::start() {
 	libecap::adapter::Service::start();
 	filter = filter_construct(db_uri.c_str());
 	if (filter == NULL) throw libecap::TextException("db init error");
+	default_policy_is_allow = (default_policy == "allow");
 }
 
 void Adapter::Service::stop() {
@@ -172,11 +175,12 @@ bool Adapter::Service::wantsUrl(const char *url) const {
 
 Adapter::Service::MadeXactionPointer
 Adapter::Service::makeXaction(libecap::host::Xaction *hostx) {
-	return Adapter::Service::MadeXactionPointer(new Adapter::Xaction(hostx, filter));
+	return Adapter::Service::MadeXactionPointer(new Adapter::Xaction(hostx, filter, default_policy_is_allow));
 }
 
 
-Adapter::Xaction::Xaction(libecap::host::Xaction *x, const filter_struct *f): hostx(x), filter(f) {}
+Adapter::Xaction::Xaction(libecap::host::Xaction *x, const filter_struct *f, bool d):
+		hostx(x), filter(f), default_policy_is_allow(d) {}
 
 Adapter::Xaction::~Xaction() {
 	if (libecap::host::Xaction *x = hostx) {
@@ -208,20 +212,16 @@ std::string Adapter::Xaction::getUri() const {
 
 void Adapter::Xaction::start() {
 	Must(hostx);
-
 	filter_uri_result_enum result = filter_uri_is_allowed(filter, getUri().c_str());
-	// TODO default policy for domain not in db
-	if (result != FILTER_URI_ALLOW && result != FILTER_URI_DOESNT_EXIST) {
+	if (result == FILTER_URI_ALLOW || (default_policy_is_allow && result == FILTER_URI_DOESNT_EXIST)) {
+		// Make this adapter non-callable
+		libecap::host::Xaction *x = hostx;
+		hostx = 0;
+		// Tell the host to use the virgin message (request is not blacklisted)
+		x->useVirgin();
+	} else {
 		hostx->blockVirgin(); // block access
-		return;
 	}
-	
-	// Make this adapter non-callable
-	libecap::host::Xaction *x = hostx;
-	hostx = 0;
-	
-	// Tell the host to use the virgin message (request is not blacklisted)
-	x->useVirgin();
 }
 
 void Adapter::Xaction::stop() {
