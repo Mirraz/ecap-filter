@@ -4,6 +4,7 @@
 #include <libecap/common/errors.h>
 #include <libecap/common/message.h>
 #include <libecap/common/header.h>
+#include <libecap/common/names.h>
 #include <libecap/common/named_values.h>
 #include <libecap/adapter/service.h>
 #include <libecap/adapter/xaction.h>
@@ -40,6 +41,8 @@ class Service: public libecap::adapter::Service {
 
 	private:
 		filter_struct *filter;
+		std::string db_uri;
+		std::string default_policy;
 };
 
 
@@ -94,6 +97,9 @@ class Xaction: public libecap::adapter::Xaction {
 
 } // namespace Adapter
 
+static const std::string CfgErrorPrefix =
+	"Minimal Adapter: configuration error: ";
+
 std::string Adapter::Service::uri() const {
 	return "ecap://e-cap.org/ecap/services/sample/minimal";
 }
@@ -111,42 +117,41 @@ void Adapter::Service::configure(const libecap::Options &cfg) {
 	cfg.visitEachOption(cfgtor);
 
 	// check for post-configuration errors and inconsistencies
-	/*
-	if (victim.empty()) {
-		throw libecap::TextException(CfgErrorPrefix +
-			"victim value is not set");
-	}
-	*/
+	if (db_uri.empty()) throw libecap::TextException(CfgErrorPrefix + "db_uri value is not set");
+	if (default_policy.empty()) throw libecap::TextException(CfgErrorPrefix + "db_uri value is not set");
 }
 
 void Adapter::Service::reconfigure(const libecap::Options &cfg) {
-	/*
-	victim.clear();
-	replacement.clear();
-	*/
+	db_uri.clear();
+	default_policy.clear();
 	configure(cfg);
 }
 
 void Adapter::Service::setOne(const libecap::Name &name, const libecap::Area &valArea) {
 	const std::string value = valArea.toString();
-	/*
-	if (name == "victim")
-		setVictim(value);
-	else
-	if (name == "replacement")
-		replacement = value; // no checks needed, even an empty value is OK
-	else
-	if (name.assignedHostId())
-		; // skip host-standard options we do not know or care about
-	else
+
+	if (name == "db_uri") {
+		if (value.empty())
+			throw libecap::TextException(CfgErrorPrefix + "empty db_uri value is not allowed");
+		db_uri = value;
+	} else if (name == "default_policy") {
+		if (value.empty())
+			throw libecap::TextException(CfgErrorPrefix + "empty default_policy value is not allowed");
+		if (!(value == "allow" || value == "deny"))
+			throw libecap::TextException(CfgErrorPrefix + "unsupported default_policy value");
+		default_policy = value;
+	} else if (name.assignedHostId()) {
+		// skip host-standard options we do not know or care about
+	} else {
 		throw libecap::TextException(CfgErrorPrefix +
-			"unsupported configuration parameter: " + name.image());
-	*/
+				"unsupported configuration parameter: " + name.image());
+	}
 }
 
 void Adapter::Service::start() {
 	libecap::adapter::Service::start();
-	filter = filter_construct("/tmp/db.sqlite"); // TODO check result
+	filter = filter_construct(db_uri.c_str());
+	if (filter == NULL) throw libecap::TextException("db init error");
 }
 
 void Adapter::Service::stop() {
