@@ -103,9 +103,28 @@ static size_t extract_domain(const char *uri, const char **domain_out) {
 	return cur-token;
 }
 
-static filter_uri_result_enum categories_are_allowed(const char *categories, const map_struct *map) {
-	// TODO
-	return FILTER_URI_DENY;
+static filter_uri_result_enum categories_are_allowed(const char *categories_list, const map_struct *map) {
+	const char *cur = categories_list;
+	while (1) {
+		if (!(*cur >= '0' && *cur <= '9')) return FILTER_URI_ERROR;
+		map_key_type category = 0;
+		while (*cur >= '0' && *cur <= '9') {
+			if (!(category < MAP_KEY_TYPE_MAX / 10)) return FILTER_URI_ERROR;
+			category *= 10;
+			map_key_type num = *cur - '0';
+			if (!(category < MAP_KEY_TYPE_MAX - num)) return FILTER_URI_ERROR;
+			category += num;
+			++cur;
+		}
+		if (!(*cur == '\0' || *cur == ',')) return FILTER_URI_ERROR;
+		if (! map_exists(map, category)) return FILTER_URI_ERROR;
+		map_value_type is_allowed = map_get(map, category);
+		if (! is_allowed) return FILTER_URI_DENY;
+		if (*cur == '\0') break;
+		assert(*cur == ',');
+		++cur;
+	}
+	return FILTER_URI_ALLOW;
 }
 
 filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri) {
@@ -126,8 +145,8 @@ filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const 
 	int step_res = sqlite3_step(filter->select_categories_stmt);
 	if (step_res != SQLITE_ROW && step_res != SQLITE_DONE) goto err_reset;
 	if (step_res == SQLITE_DONE) {result = FILTER_URI_DOESNT_EXIST; goto err_reset;}
-
 	assert(step_res == SQLITE_ROW);
+
 	const unsigned char *categories = sqlite3_column_text(filter->select_categories_stmt, 0);
 	if (sqlite3_step(filter->select_categories_stmt) != SQLITE_DONE) goto err_reset;
 

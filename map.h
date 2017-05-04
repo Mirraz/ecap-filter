@@ -2,12 +2,14 @@
 #define MAP_H
 
 #include <stdbool.h>
+#include <limits.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef unsigned int map_key_type;
+#define MAP_KEY_TYPE_MAX UINT_MAX
 typedef bool map_value_type;
 
 struct map_struct_;
