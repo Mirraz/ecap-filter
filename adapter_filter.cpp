@@ -11,7 +11,6 @@
 #include <libecap/host/xaction.h>
 #include "filter.h"
 
-#define PACKAGE_NAME "eCAP Adapter Sample"
 #define PACKAGE_VERSION "1.0.0"
 
 namespace Adapter { // not required, but adds clarity
@@ -100,7 +99,7 @@ class Xaction: public libecap::adapter::Xaction {
 } // namespace Adapter
 
 static const std::string CfgErrorPrefix =
-	"Minimal Adapter: configuration error: ";
+	"Filter Adapter: configuration error: ";
 
 std::string Adapter::Service::uri() const {
 	return "ecap://e-cap.org/ecap/services/sample/minimal";
@@ -111,7 +110,7 @@ std::string Adapter::Service::tag() const {
 }
 
 void Adapter::Service::describe(std::ostream &os) const {
-	os << "A minimal adapter from " << PACKAGE_NAME << " v" << PACKAGE_VERSION;
+	os << "Filter adapter v" << PACKAGE_VERSION;
 }
 
 void Adapter::Service::configure(const libecap::Options &cfg) {
@@ -230,7 +229,7 @@ void Adapter::Xaction::stop() {
 }
 
 void Adapter::Xaction::noBodySupport() const {
-	Must(!"must not be called: minimal adapter offers no body support");
+	Must(!"must not be called: filter adapter offers no body support");
 	// not reached
 }
 
