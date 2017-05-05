@@ -25,11 +25,11 @@ Put `ecap_adapter_filter.so` into `/usr/local/lib/`
 ```
 loadable_modules /usr/local/lib/ecap_adapter_filter.so
 ecap_enable on
-ecap_service ecapModifier respmod_precache \
+ecap_service ecapFilter reqmod_precache \
     uri=ecap://e-cap.org/ecap/services/sample/minimal \
     db_uri=/tmp/db.sqlite \
     default_policy=allow
-adaptation_access ecapModifier allow all
+adaptation_access ecapFilter allow all
 ```
 Parameters:
 * `db_uri` -- sqlite database uri
