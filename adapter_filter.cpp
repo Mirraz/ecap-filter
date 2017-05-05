@@ -9,6 +9,7 @@
 #include <libecap/adapter/service.h>
 #include <libecap/adapter/xaction.h>
 #include <libecap/host/xaction.h>
+#include "Debug.h"
 #include "filter.h"
 
 #define PACKAGE_VERSION "1.0.0"
@@ -114,6 +115,8 @@ void Adapter::Service::describe(std::ostream &os) const {
 }
 
 void Adapter::Service::configure(const libecap::Options &cfg) {
+	if (Debug::Prefix.empty()) Debug::Prefix = "adapter_filter: ";
+
 	Cfgtor cfgtor(*this);
 	cfg.visitEachOption(cfgtor);
 
