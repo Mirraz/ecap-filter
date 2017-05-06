@@ -4,6 +4,7 @@
 #include <libecap/common/errors.h>
 #include <libecap/common/message.h>
 #include <libecap/common/header.h>
+#include <libecap/common/name.h>
 #include <libecap/common/names.h>
 #include <libecap/common/named_values.h>
 #include <libecap/adapter/service.h>
@@ -94,7 +95,8 @@ class Xaction: public libecap::adapter::Xaction {
 		const filter_struct *filter;
 		bool default_policy_is_allow;
 
-		std::string getUri() const;
+		typedef const libecap::RequestLine *CLRLP;
+		CLRLP getRequestLine() const;
 };
 
 } // namespace Adapter
@@ -199,31 +201,35 @@ void Adapter::Xaction::visitEachOption(libecap::NamedValueVisitor &) const {
 	// this transaction has no meta-information to pass to the visitor
 }
 
-std::string Adapter::Xaction::getUri() const {
-    typedef const libecap::RequestLine *CLRLP;
+Adapter::Xaction::CLRLP Adapter::Xaction::getRequestLine() const {
     if (CLRLP virginLine = dynamic_cast<CLRLP>(&hostx->virgin().firstLine())) {
-        return virginLine->uri().toString();
+        return virginLine;
     } else {
 		if (CLRLP causeLine = dynamic_cast<CLRLP>(&hostx->cause().firstLine())) {
-			return causeLine->uri().toString();
+			return causeLine;
 		} else {
-			return "";
+			return NULL;
 		}
     }
 }
 
 void Adapter::Xaction::start() {
 	Must(hostx);
-	filter_uri_result_enum result = filter_uri_is_allowed(filter, getUri().c_str());
-	if (result == FILTER_URI_ALLOW || (default_policy_is_allow && result == FILTER_URI_DOESNT_EXIST)) {
-		// Make this adapter non-callable
-		libecap::host::Xaction *x = hostx;
-		hostx = 0;
-		// Tell the host to use the virgin message (request is not blacklisted)
-		x->useVirgin();
-	} else {
-		hostx->blockVirgin(); // block access
+	CLRLP requestLine = getRequestLine();
+	if (requestLine == NULL) {hostx->blockVirgin(); return;}
+	std::string uri = requestLine->uri().toString();
+	const libecap::Name &method = requestLine->method();
+	int uri_is_authority = (method == libecap::methodConnect);
+	filter_uri_result_enum result = filter_uri_is_allowed(filter, uri.c_str(), uri_is_authority);
+	if (!(result == FILTER_URI_ALLOW || (default_policy_is_allow && result == FILTER_URI_DOESNT_EXIST))) {
+		hostx->blockVirgin();
+		return;
 	}
+	// Make this adapter non-callable
+	libecap::host::Xaction *x = hostx;
+	hostx = 0;
+	// Tell the host to use the virgin message (request is not blacklisted)
+	x->useVirgin();
 }
 
 void Adapter::Xaction::stop() {

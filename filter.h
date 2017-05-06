@@ -17,7 +17,7 @@ typedef enum {
 
 filter_struct *filter_construct(const char *filename);
 void filter_destruct(filter_struct *filter);
-filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri);
+filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri, int uri_is_authority);
 
 #ifdef __cplusplus
 }

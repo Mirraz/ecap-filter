@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include "filter.h"
+#include "uri_parser.h"
 #include "map.h"
 
 struct filter_struct_ {
@@ -73,41 +74,6 @@ void filter_destruct(filter_struct *filter) {
 	free(filter);
 }
 
-static size_t extract_domain(const char *uri, const char **domain_out) {
-	// scheme:[//[user[:password]@]host[:port]][/path][?query][#fragment]
-	const char *cur = uri, *token = cur;
-	// 'scheme:'
-	while (*cur != '\0' && *cur != ':') ++cur;
-	if (*cur == '\0') return 0;
-	assert(*cur == ':');
-	++cur;
-	token = cur;
-	// '//'
-	if (*cur != '/') return 0;
-	++cur;
-	if (*cur != '/') return 0;
-	++cur;
-	token = cur;
-	// authority part
-	while (*cur != '\0' && *cur != ':' && *cur != '@' && *cur != '/') ++cur;
-	if (*cur == '\0' || *cur == '/') {*domain_out = token; return cur-token;}
-	if (*cur == ':') {
-		++cur;
-		const char *prev_token = token;
-		token = cur;
-		// 'password@' or 'port/' or 'port\0'
-		while (*cur != '\0' && *cur != '@' && *cur != '/') ++cur;
-		if (*cur == '\0' || *cur == '/') {*domain_out = prev_token; return token-prev_token-1;}
-	}
-	assert(*cur == '@');
-	++cur;
-	token = cur;
-	// 'host:' or 'host/' or 'host\0'
-	while (*cur != '\0' && *cur != ':' && *cur != '/') ++cur;
-	*domain_out = token;
-	return cur-token;
-}
-
 static filter_uri_result_enum categories_are_allowed(const char *categories_list, const map_struct *map) {
 	const char *cur = categories_list;
 	while (1) {
@@ -132,11 +98,15 @@ static filter_uri_result_enum categories_are_allowed(const char *categories_list
 	return FILTER_URI_ALLOW;
 }
 
-filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri) {
+filter_uri_result_enum filter_uri_is_allowed(const filter_struct *filter, const char *uri, int uri_is_authority) {
 	filter_uri_result_enum result = FILTER_URI_ERROR;
 	if (filter == NULL) goto err_return;
 	const char *domain;
-	size_t domain_size = extract_domain(uri, &domain);
+	size_t domain_size = (
+		!uri_is_authority ?
+		uri_extract_domain(uri, &domain) :
+		authority_extract_domain(uri, &domain)
+	);
 	if (domain_size == 0) goto err_return;
 
 	if (
