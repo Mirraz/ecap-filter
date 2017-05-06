@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sqlite3.h>
 #include "filter.h"
+#include "cdebug.h"
 #include "uri_parser.h"
 #include "map.h"
 

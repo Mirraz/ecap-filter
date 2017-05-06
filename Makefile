@@ -8,7 +8,7 @@ LDFLAGS=-shared -lecap -lsqlite3
 
 all: ecap_adapter_filter.so
 
-ecap_adapter_filter.so: adapter_filter.o Debug.o filter.o uri_parser.o map.o
+ecap_adapter_filter.so: adapter_filter.o Debug.o cdebug.o filter.o uri_parser.o map.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 adapter_filter.o: adapter_filter.cpp Debug.h filter.h Makefile
@@ -17,7 +17,10 @@ adapter_filter.o: adapter_filter.cpp Debug.h filter.h Makefile
 Debug.o: Debug.cpp Debug.h Makefile
 	$(CPPC) -o $@ $< -c $(CPPFLAGS)
 
-filter.o: filter.c filter.h uri_parser.h map.h Makefile
+cdebug.o: cdebug.cpp cdebug.h Debug.h Makefile
+	$(CPPC) -o $@ $< -c $(CPPFLAGS)
+
+filter.o: filter.c filter.h cdebug.h uri_parser.h map.h Makefile
 	$(CC) -o $@ $< -c $(CFLAGS)
 
 uri_parser.o: uri_parser.c uri_parser.h Makefile
