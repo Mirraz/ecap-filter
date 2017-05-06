@@ -8,8 +8,7 @@ struct map_struct_ {
 };
 
 map_struct *map_construct() {
-	map_struct *map = new map_struct;
-	return map;
+	return new(std::nothrow) map_struct;
 }
 
 void map_destruct(map_struct *map) {
