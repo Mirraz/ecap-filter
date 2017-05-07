@@ -97,6 +97,7 @@ class Xaction: public libecap::adapter::Xaction {
 
 		typedef const libecap::RequestLine *CLRLP;
 		CLRLP getRequestLine() const;
+		bool isAllowedUri() const;
 };
 
 } // namespace Adapter
@@ -213,15 +214,29 @@ Adapter::Xaction::CLRLP Adapter::Xaction::getRequestLine() const {
     }
 }
 
-void Adapter::Xaction::start() {
-	Must(hostx);
+bool Adapter::Xaction::isAllowedUri() const {
 	CLRLP requestLine = getRequestLine();
-	if (requestLine == NULL) {hostx->blockVirgin(); return;}
+	if (requestLine == NULL) {
+		Debug(ilCritical) << "No request line";
+		return false;
+	}
 	std::string uri = requestLine->uri().toString();
 	const libecap::Name &method = requestLine->method();
 	int uri_is_authority = (method == libecap::methodConnect);
-	filter_uri_result_enum result = filter_uri_is_allowed(filter, uri.c_str(), uri_is_authority);
-	if (!(result == FILTER_URI_ALLOW || (default_policy_is_allow && result == FILTER_URI_DOESNT_EXIST))) {
+	filter_uri_result_enum filter_uri_result = filter_uri_is_allowed(filter, uri.c_str(), uri_is_authority);
+	if (filter_uri_result == FILTER_URI_ERROR) {
+		//Debug(ilCritical) << "Filter error";
+		return false;
+	}
+	return (
+		(filter_uri_result == FILTER_URI_ALLOW) ||
+		(filter_uri_result == FILTER_URI_DOESNT_EXIST && default_policy_is_allow)
+	);
+}
+
+void Adapter::Xaction::start() {
+	Must(hostx);
+	if (! isAllowedUri()) {
 		hostx->blockVirgin();
 		return;
 	}
