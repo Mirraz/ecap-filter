@@ -60,6 +60,24 @@ filter_struct *filter_construct(const char *db_uri) {
 		while ((res = sqlite3_step(stmt)) == SQLITE_ROW) {
 			int category_id = sqlite3_column_int(stmt, 0);
 			int allowed     = sqlite3_column_int(stmt, 1);
+			if (category_id < 0) {
+				cdebug_printf(
+					CDEBUG_IL_CRITICAL,
+					"invalid 'category_id' column value '%d'",
+					category_id
+				);
+				goto err_sqlite3_close;
+			}
+			assert((map_key_type)category_id <= MAP_KEY_TYPE_MAX);
+			if (!(allowed == 0 || allowed == 1)) {
+				cdebug_printf(
+					CDEBUG_IL_CRITICAL,
+					"invalid 'allowed' column value '%d' for category_id '%d'",
+					allowed,
+					category_id
+				);
+				goto err_sqlite3_close;
+			}
 			map_put_uniq(filter->map, (map_key_type)category_id, (map_value_type)allowed);
 		}
 		if (res != SQLITE_DONE) {print_sqlite3_sql_err("step", sql, res); goto err_sqlite3_close;}
