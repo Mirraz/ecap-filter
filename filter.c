@@ -119,11 +119,10 @@ static str_parse_number_result_enum str_parse_number(
 	const char *cur = str;
 	while (*cur >= '0' && *cur <= '9') {
 		number_type digit = *cur - '0';
-		if (!(number < NUMBER_TYPE_MAX / 10 && number * 10 < NUMBER_TYPE_MAX - digit)) {
-			*end_out = cur;
-			return SPNR_OVERFLOW;
-		}
-		number = number * 10 + digit;
+		if (!(number <= NUMBER_TYPE_MAX / 10)) {*end_out = cur; return SPNR_OVERFLOW;}
+		number *= 10;
+		if (!(number <= NUMBER_TYPE_MAX - digit)) {*end_out = cur; return SPNR_OVERFLOW;}
+		number += digit;
 		++cur;
 	}
 	if (cur == str) {*end_out = cur; return SPNR_INVALID;}
