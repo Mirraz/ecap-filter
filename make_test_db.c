@@ -4,6 +4,7 @@
 #include <string.h>
 #include <limits.h>
 #include <time.h>
+#include <math.h>
 #include <sqlite3.h>
 
 #define MAX_CATEGS_NUMBER 512
@@ -11,10 +12,13 @@
 #define MAX_CATEGS_OF_DOMAIN 32
 #define MAX_CATEGS_STR_SIZE ((MAX_CATEG_DEC_SIZE+1)*MAX_CATEGS_OF_DOMAIN-1)
 
-#define MIN_DOMAIN_LENGTH 8
-#define MAX_DOMAIN_LENGTH 256
+#define MIN_DOMAIN_LENGTH 4
+#define MAX_DOMAIN_LENGTH 253
 static const char domain_symbols[] = "abcdefghijklmnopqrstuvwxyz0123456789.";
 #define DOMAIN_SYMBOLS_NUMBER (sizeof(domain_symbols)/sizeof(domain_symbols[0])-1)
+#define DOMAIN_SYMBOLS_NUMBER_NO_DOT (DOMAIN_SYMBOLS_NUMBER-1)
+#define DOMAIN_LENGTH_GAMMA_THETA 2.0
+#define DOMAIN_LENGTH_GAMMA_K 11
 
 typedef unsigned int categ_type;
 #define CATEG_TYPE_MAX UINT_MAX
@@ -94,13 +98,39 @@ int fill_rules(sqlite3 *db, categ_type categs_number) {
 	return 0;
 }
 
+unsigned int rand_gamma_distributed(double theta, unsigned int k) {
+	assert(theta > 0);
+	assert(k > 0);
+	double value = 0;
+	for (unsigned int i=0; i<k; ++i) value += log((double)RAND_MAX+1.0) - log((double)rand()+1.0);
+	return lrint(value * theta);
+}
+
 size_t generate_random_domain(char domain[MAX_DOMAIN_LENGTH]) {
-	size_t domain_length = (rand() % (MAX_DOMAIN_LENGTH-MIN_DOMAIN_LENGTH+1)) + MIN_DOMAIN_LENGTH;
-	assert(domain_length <= MAX_DOMAIN_LENGTH);
-	// TODO dots in domain
+	size_t domain_length;
+	do {
+		domain_length = rand_gamma_distributed(DOMAIN_LENGTH_GAMMA_THETA, DOMAIN_LENGTH_GAMMA_K);
+	} while (!(domain_length >= MIN_DOMAIN_LENGTH && domain_length <= MAX_DOMAIN_LENGTH));
+
+	unsigned int dots_count = 0;
 	for (size_t i=0; i<domain_length; ++i) {
-		domain[i] = domain_symbols[rand() % DOMAIN_SYMBOLS_NUMBER];
+		size_t symbol_idx = rand() % (
+			i != 0 && i != domain_length-1 ?
+			DOMAIN_SYMBOLS_NUMBER :
+			DOMAIN_SYMBOLS_NUMBER_NO_DOT
+		);
+		domain[i] = domain_symbols[symbol_idx];
+		if (domain[i] == '.') ++dots_count;
 	}
+
+	if (dots_count == 0) {
+		size_t dot_idx;
+		do {
+			dot_idx = rand() % (domain_length-2) + 1;
+		} while (domain[dot_idx-1] == '.' || domain[dot_idx+1] == '.');
+		domain[dot_idx] = '.';
+	}
+
 	return domain_length;
 }
 

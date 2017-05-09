@@ -32,7 +32,7 @@ map.o: map.cpp map.h Makefile
 
 
 make_test_db: make_test_db.o
-	gcc -o $@ $^ -lsqlite3
+	gcc -o $@ $^ -lsqlite3 -lm
 
 make_test_db.o: make_test_db.c Makefile
 	gcc -o $@ $< -c -O2 -Wall -Wextra -pipe
