@@ -205,13 +205,14 @@ int fill_sites(sqlite3 *db, categ_type categs_number, domains_number_type domain
 	return 0;
 }
 
-int fill_tables(sqlite3 *db, categ_type categs_number, domains_number_type domains_number) {
+int fill_db(sqlite3 *db, categ_type categs_number, domains_number_type domains_number) {
+	if (create_tables(db)) return 1;
 	if (fill_rules(db, categs_number)) return 1;
 	if (fill_sites(db, categs_number, domains_number)) return 1;
 	return 0;
 }
 
-void make_test_db(const char *db_uri, categ_type categs_number, domains_number_type domains_number) {
+int make_test_db(const char *db_uri, categ_type categs_number, domains_number_type domains_number) {
 	sqlite3 *db;
 	int res;
 
@@ -221,16 +222,13 @@ void make_test_db(const char *db_uri, categ_type categs_number, domains_number_t
 		SQLITE_OPEN_URI | SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
 		NULL
 	);
-	if (res != SQLITE_OK) {print_sqlite3_err("open_v2", res); goto err_exit;}
+	if (res != SQLITE_OK) {print_sqlite3_err("open_v2", res); return 1;}
 
-	if (create_tables(db)) goto err_sqlite3_close;
-	if (fill_tables(db, categs_number, domains_number)) goto err_sqlite3_close;
+	int fill_db_res = fill_db(db, categs_number, domains_number);
 
-err_sqlite3_close:
 	res = sqlite3_close(db);
-	if (res != SQLITE_OK) print_sqlite3_err("close", res);
-err_exit:
-	exit(EXIT_FAILURE);
+	if (res != SQLITE_OK) {print_sqlite3_err("close", res); return 1;}
+	return fill_db_res;
 }
 
 int main (int argc, char *argv[]) {
@@ -243,6 +241,6 @@ int main (int argc, char *argv[]) {
 	}
 	printf("seed = %u\n", seed);
 	srand(seed);
-	make_test_db(argv[1], 128, 1048576);
-	return EXIT_SUCCESS;
+	int res = make_test_db(argv[1], 128, 1048576);
+	return (!res ? EXIT_SUCCESS : EXIT_FAILURE);
 }
